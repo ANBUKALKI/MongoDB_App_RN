@@ -1,99 +1,62 @@
 const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const authRoutes = require('./routes/authRoutes');
-const messageRoutes = require('./routes/messageRoutes');
-const userRoutes = require('./routes/userRoutes');
-const cloudinary = require('./config/Cloudinary');
-
+// const ngrok = require('ngrok');
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
+// app.use(cors({ origin: 'http://10.10.10.55:5000/api/items' }));
 app.use(express.json());
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+const MONGO_URI = process.env.MONGO_URI;
+// MongoDB Atlas Connection
+// const uri = "mongodb+srv://anbarasan16022000:nAImw4QqsLwOqpeG@cluster1.6f4z0.mongodb.net/DemoAppDatabase?retryWrites=true&w=majority&appName=Cluster1";
+mongoose.connect(MONGO_URI)
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.log(err));
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/messages', messageRoutes);
-app.use('/api/users', userRoutes);
-
-// Socket.io
-io.on('connection', (socket) => {
-  console.log('A user connected');
-
-  socket.on('send_message', (message) => {
-    io.emit('receive_message', message);
-  });
-
-  socket.on('send_group_message', (message) => {
-    io.emit('receive_group_message', message);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('A user disconnected');
-  });
+// Define a Schema
+const ItemSchema = new mongoose.Schema({
+  name: String,
 });
 
-// Start Server
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const Item = mongoose.model('Item', ItemSchema);
+
+// Routes
+app.get('/api/items', async (req, res) => {
+  try {
+    const items = await Item.find();
+    res.json(items);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.post('/api/items', async (req, res) => {
+  // console.log('--->',req.body.name)
+        
 
 
-//---------------------------------
-// const express = require('express');
-// const mongoose = require('mongoose');
-// const cors = require('cors');
+  const item = new Item({
+    name: req.body.name,
+  });
 
-// const app = express();
-// const PORT = 5000;
+  try {
+    const newItem = await item.save();
+    res.status(201).json(newItem);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
 
-// // Middleware
-// app.use(cors({
-//   origin: 'http://10.10.10.55:5000', // Allow all origins (for development only)
-
-// }));
-// app.use(express.json());
-
-// // MongoDB Atlas connection
-// const MONGO_URI = 'mongodb+srv://anbarasan16022000:MDBanbu2000@cluster0.774m1.mongodb.net/myDatabase?retryWrites=true&w=majority&appName=Cluster0';
-
-// mongoose.connect(MONGO_URI)
-//   .then(() => console.log('Connected to MongoDB Atlas'))
-//   .catch(err => console.error('Error connecting to MongoDB:', err));
-
-// // Define a schema and model
-// const userSchema = new mongoose.Schema();
-
-// const User = mongoose.model('User', userSchema);
-
-// // Route to get data from MongoDB
-// app.get('/api/users', async (req, res) => {
-//   console.log(req.headers, "--------------header----");
-  
-//   try {
-//     const users = await User.find();
-//     console.log('------user data -----',users)
-//     res.json(users);
-//     // res.json([
-//     //   { _id: '1', name: 'John Doe', age: 30, email: 'john.doe@example.com' },
-//     //   { _id: '2', name: 'Jane Doe', age: 25, email: 'jane.doe@example.com' },
-//     // ]);
-//   } catch (err) {
-//     console.log('-----error----',err)
-//     res.status(500).json({ message: err.message });
-//   }
-// });
-
-// // Start the server
 // app.listen(PORT, () => {
-//   console.log(`Server is running on http://localhost:${PORT}`);
-
+//   console.log(`Server is running on port ${PORT}`);
 // });
+app.listen(PORT, async () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
 
+  // const url = await ngrok.connect(PORT);
+  // console.log(`ngrok tunnel opened at: ${url}`);
+});
