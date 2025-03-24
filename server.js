@@ -36,7 +36,7 @@ app.get('/api/items', async (req, res) => {
 
 app.get('/api/forceUpdate', async (req, res) => {
   try {
-    const items = {version:1.1}
+    const items = {version:1.2}
     res.json(items);
   } catch (err) {
     res.status(500).json({ message: err.message });
